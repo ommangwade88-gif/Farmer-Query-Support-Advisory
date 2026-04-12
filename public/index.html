@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farmer Advisory System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">AI-assisted advisory</p>
+            <h1>Farmer Query Support &amp; Advisory</h1>
+          </div>
+        </div>
+        <p class="header-tagline">
+          Plan crops, estimate yield, check leaf photos, pick tools, and watch the sky—all in one calm workspace.
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="wrap">
+      <section class="panel query-panel" aria-labelledby="query-heading">
+        <div class="panel-head">
+          <h2 id="query-heading">Ask a question</h2>
+          <p class="muted">Keyword-based guidance from Node.js—use the modules below for structured analysis.</p>
+        </div>
+        <form id="query-form" class="stack">
+          <label class="field">
+            <span>Your question</span>
+            <textarea
+              id="query-text"
+              name="question"
+              rows="3"
+              placeholder="e.g. My wheat leaves look yellow after heavy rain—what should I check?"
+              required
+            ></textarea>
+          </label>
+          <button type="submit" class="btn primary">Get guidance</button>
+        </form>
+        <div id="query-result" class="result-box hidden" role="status"></div>
+      </section>
+
+      <section class="section-intro" aria-labelledby="modules-heading">
+        <p class="eyebrow">Modules</p>
+        <h2 id="modules-heading">Trending tools for your farm</h2>
+        <p class="lede muted">Most-used assistants from our reference layout—each wired to a working backend.</p>
+      </section>
+
+      <div class="module-grid">
+        <article class="module-card" id="crop-rec">
+          <div class="module-icon icon-1" aria-hidden="true">1</div>
+          <div class="module-body">
+            <h3>Crop recommendation</h3>
+            <p class="muted small">
+              Informed decisions from soil, climate, and season signals—ranked suggestions with rationale.
+            </p>
+            <form class="stack tight" data-endpoint="/api/crop-recommendation">
+              <div class="field-row">
+                <label class="field">
+                  <span>Soil type</span>
+                  <select name="soil_type" required>
+                    <option value="clay">Clay</option>
+                    <option value="loam" selected>Loam</option>
+                    <option value="sandy loam">Sandy loam</option>
+                    <option value="silt">Silt</option>
+                    <option value="black cotton">Black cotton</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Soil pH</span>
+                  <input name="soil_ph" type="number" step="0.1" min="0" max="14" value="6.8" required />
+                </label>
+              </div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Rainfall (mm/year)</span>
+                  <input name="annual_rainfall_mm" type="number" min="0" value="900" required />
+                </label>
+                <label class="field">
+                  <span>Avg temp (°C)</span>
+                  <input name="avg_temperature_c" type="number" step="0.1" value="26" required />
+                </label>
+              </div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Season</span>
+                  <select name="season" required>
+                    <option value="kharif" selected>Kharif</option>
+                    <option value="rabi">Rabi</option>
+                    <option value="zaid">Zaid</option>
+                    <option value="year-round">Year-round</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Region hint</span>
+                  <input name="region_hint" type="text" placeholder="State or district" />
+                </label>
+              </div>
+              <button type="submit" class="btn ghost">Run recommendation</button>
+            </form>
+            <div class="result-box hidden" data-result></div>
+          </div>
+        </article>
+
+        <article class="module-card" id="yield-pred">
+          <div class="module-icon icon-2" aria-hidden="true">2</div>
+          <div class="module-body">
+            <h3>Crop yield prediction</h3>
+            <p class="muted small">
+              Transparent heuristics for planning totals—Python blends irrigation, nutrition, and organic matter.
+            </p>
+            <form class="stack tight" data-endpoint="/api/yield-prediction">
+              <label class="field">
+                <span>Crop</span>
+                <input name="crop" type="text" value="wheat" required />
+              </label>
+              <div class="field-row">
+                <label class="field">
+                  <span>Area (acres)</span>
+                  <input name="field_area_acres" type="number" step="0.1" min="0.1" value="5" required />
+                </label>
+                <label class="field">
+                  <span>Irrigation</span>
+                  <select name="irrigation" required>
+                    <option value="rainfed">Rainfed</option>
+                    <option value="drip" selected>Drip</option>
+                    <option value="sprinkler">Sprinkler</option>
+                    <option value="flood">Flood</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Fertilizer level</span>
+                  <select name="fertilizer_level" required>
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Organic matter (%)</span>
+                  <input name="soil_organic_matter_pct" type="number" step="0.1" min="0" max="15" value="2.2" />
+                </label>
+              </div>
+              <button type="submit" class="btn ghost">Estimate yield</button>
+            </form>
+            <div class="result-box hidden" data-result></div>
+          </div>
+        </article>
+
+        <article class="module-card" id="crop-health">
+          <div class="module-icon icon-3" aria-hidden="true">3</div>
+          <div class="module-body">
+            <h3>Crop health</h3>
+            <p class="muted small">
+              Upload a canopy or leaf photo—Python analyzes color balance and contrast for a quick health score.
+            </p>
+            <form class="stack tight" data-endpoint="/api/crop-health" data-multipart>
+              <label class="field">
+                <span>Image</span>
+                <input name="file" type="file" accept="image/*" required />
+              </label>
+              <button type="submit" class="btn ghost">Analyze image</button>
+            </form>
+            <div class="result-box hidden" data-result></div>
+          </div>
+        </article>
+
+        <article class="module-card" id="tools-rec">
+          <div class="module-icon icon-4" aria-hidden="true">4</div>
+          <div class="module-body">
+            <h3>Tools recommendation</h3>
+            <p class="muted small">Task-first implements, tuned to your crop family.</p>
+            <form class="stack tight" data-endpoint="/api/tools-recommendation">
+              <label class="field">
+                <span>Crop</span>
+                <input name="crop" type="text" value="potato" required />
+              </label>
+              <label class="field">
+                <span>Primary task</span>
+                <select name="primary_task" required>
+                  <option value="land_prep">Land preparation</option>
+                  <option value="sowing">Sowing</option>
+                  <option value="weeding">Weeding</option>
+                  <option value="spraying" selected>Spraying</option>
+                  <option value="harvest">Harvest</option>
+                  <option value="storage">Storage</option>
+                </select>
+              </label>
+              <button type="submit" class="btn ghost">Suggest tools</button>
+            </form>
+            <div class="result-box hidden" data-result></div>
+          </div>
+        </article>
+
+        <article class="module-card module-wide" id="weather">
+          <div class="module-icon icon-5" aria-hidden="true">5</div>
+          <div class="module-body">
+            <h3>Local weather forecast</h3>
+            <p class="muted small">
+              Powered by Open-Meteo—no API keys. Defaults to a farm-friendly latitude/longitude; change to yours.
+            </p>
+            <form class="stack tight" data-endpoint="/api/weather">
+              <div class="field-row">
+                <label class="field">
+                  <span>Latitude</span>
+                  <input name="latitude" type="number" step="0.0001" value="20.5937" required />
+                </label>
+                <label class="field">
+                  <span>Longitude</span>
+                  <input name="longitude" type="number" step="0.0001" value="78.9629" required />
+                </label>
+                <label class="field">
+                  <span>Days</span>
+                  <input name="days" type="number" min="1" max="8" value="5" required />
+                </label>
+              </div>
+              <button type="submit" class="btn ghost">Refresh forecast</button>
+            </form>
+            <div class="result-box hidden" data-result></div>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <p class="muted small">
+          Node.js serves the UI and advisory endpoint; Python (FastAPI) powers analytics. Not a substitute for
+          certified agronomic advice.
+        </p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
