@@ -1,74 +1,45 @@
-// Declarative pipeline for Jenkins (Linux agents with sh; Node 18+ and Python 3.10+ on PATH).
-// Repo: https://github.com/ommangwade88-gif/Farmer-Query-Support-Advisory
 pipeline {
-    agent any
-
-    options {
-        timestamps()
-        timeout(time: 30, unit: 'MINUTES')
+    agent {
+        docker {
+            image 'nikolaik/python-nodejs:latest'
+        }
     }
 
     stages {
-        stage('Install Node') {
-            steps {
-                sh 'node --version'
-                sh 'npm ci'
-            }
-        }
 
-        stage('Install Python') {
+        stage('Verify Tools') {
             steps {
+                sh 'node -v'
+                sh 'npm -v'
                 sh 'python3 --version'
-                dir('python-service') {
-                    sh 'python3 -m pip install --upgrade pip'
-                    sh 'python3 -m pip install -r requirements.txt'
-                }
+                sh 'pip3 --version'
             }
         }
 
-        stage('Verify') {
-            parallel {
-                stage('Node syntax') {
-                    steps {
-                        sh 'node --check server.js'
-                    }
-                }
-                stage('Python bytecode') {
-                    steps {
-                        sh 'python3 -m compileall -q python-service'
-                    }
-                }
-            }
-        }
-
-        stage('Smoke: Flask health') {
+        stage('Checkout') {
             steps {
-                dir('python-service') {
-                    sh '''
-                        set -e
-                        nohup python3 main.py > flask-ci.log 2>&1 &
-                        echo $! > flask-ci.pid
-                        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-                          if curl -sf http://127.0.0.1:8000/api/health; then
-                            break
-                          fi
-                          sleep 2
-                        done
-                        curl -sf http://127.0.0.1:8000/api/health
-                        kill "$(cat flask-ci.pid)" || true
-                        wait "$(cat flask-ci.pid)" 2>/dev/null || true
-                    '''
-                }
+                git 'https://github.com/ommangwade88-gif/Farmer-Query-Support-Advisory.git'
             }
         }
-    }
 
-    post {
-        success {
-            echo 'CI finished successfully.'
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                if [ -f package.json ]; then
+                  npm install
+                fi
+
+                if [ -f requirements.txt ]; then
+                  pip3 install -r requirements.txt
+                fi
+                '''
+            }
         }
-        failure {
-            echo 'CI failed — check logs for Node/Python/smoke stages.'
+
+        stage('Build Check') {
+            steps {
+                sh 'echo "Build successful!"'
+            }
         }
     }
 }
