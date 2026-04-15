@@ -8,17 +8,6 @@ pipeline {
                 bat '''
                 node -v
                 npm -v
-
-                python --version
-                if %ERRORLEVEL% NEQ 0 (
-                  echo Python not installed
-                )
-
-                pip --version
-                if %ERRORLEVEL% NEQ 0 (
-                  echo Pip not installed
-                )
-
                 exit 0
                 '''
             }
@@ -26,7 +15,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/ommangwade88-gif/Farmer-Query-Support-Advisory.git'
+                git branch: 'main', url: 'https://github.com/ommangwade88-gif/Farmer-Query-Support-Advisory.git'
             }
         }
 
@@ -39,9 +28,6 @@ pipeline {
 
                 if exist requirements.txt (
                   pip install -r requirements.txt
-                  if %ERRORLEVEL% NEQ 0 (
-                    echo Skipping Python dependencies
-                  )
                 )
 
                 exit 0
