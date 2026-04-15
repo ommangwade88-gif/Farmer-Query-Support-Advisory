@@ -5,33 +5,31 @@ pipeline {
 
         stage('Verify Tools') {
             steps {
-                bat '''
-                node -v
-                npm -v
-                exit 0
+                sh '''
+                node -v || echo "Node not installed"
+                npm -v || echo "npm not installed"
+                python3 --version || echo "Python not installed"
                 '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                bat '''
-                if exist package.json (
+                sh '''
+                if [ -f package.json ]; then
                   npm install
-                )
+                fi
 
-                if exist requirements.txt (
-                  pip install -r requirements.txt
-                )
-
-                exit 0
+                if [ -f requirements.txt ]; then
+                  pip3 install -r requirements.txt
+                fi
                 '''
             }
         }
 
         stage('Build Check') {
             steps {
-                bat 'echo Build successful!'
+                sh 'echo "Build successful!"'
             }
         }
     }
