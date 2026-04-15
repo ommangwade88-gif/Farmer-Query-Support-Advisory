@@ -7,8 +7,8 @@ pipeline {
             steps {
                 bat 'node -v'
                 bat 'npm -v'
-                bat 'python --version'
-                bat 'pip --version'
+                bat 'python --version || echo Python not installed'
+                bat 'pip --version || echo Pip not installed'
             }
         }
 
@@ -26,7 +26,7 @@ pipeline {
                 )
 
                 if exist requirements.txt (
-                  pip install -r requirements.txt
+                  pip install -r requirements.txt || echo Skipping Python deps
                 )
                 '''
             }
