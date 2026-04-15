@@ -5,10 +5,10 @@ pipeline {
 
         stage('Verify Tools') {
             steps {
-                sh 'node -v || true'
-                sh 'npm -v || true'
-                sh 'python3 --version || true'
-                sh 'pip3 --version || true'
+                bat 'node -v'
+                bat 'npm -v'
+                bat 'python --version'
+                bat 'pip --version'
             }
         }
 
@@ -20,21 +20,21 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                if [ -f package.json ]; then
+                bat '''
+                if exist package.json (
                   npm install
-                fi
+                )
 
-                if [ -f requirements.txt ]; then
-                  pip3 install -r requirements.txt
-                fi
+                if exist requirements.txt (
+                  pip install -r requirements.txt
+                )
                 '''
             }
         }
 
         stage('Build Check') {
             steps {
-                sh 'echo "Build successful!"'
+                bat 'echo Build successful!'
             }
         }
     }
