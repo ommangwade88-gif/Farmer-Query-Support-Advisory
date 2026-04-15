@@ -1,36 +1,44 @@
 pipeline {
-    agent any
+    agent none
 
     stages {
 
-        stage('Verify Tools') {
+        stage('Node Build') {
+            agent {
+                docker { image 'node:18' }
+            }
             steps {
                 sh '''
-                node -v || echo "Node not installed"
-                npm -v || echo "npm not installed"
-                python3 --version || echo "Python not installed"
+                node -v
+                npm -v
+
+                if [ -f package.json ]; then
+                  npm install
+                fi
                 '''
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Python Check') {
+            agent {
+                docker { image 'python:3.10' }
+            }
             steps {
                 sh '''
-                if [ -f package.json ]; then
-                  npm install
-                fi
+                python --version
 
                 if [ -f requirements.txt ]; then
-                  pip3 install -r requirements.txt
+                  pip install -r requirements.txt
                 fi
                 '''
             }
         }
 
         stage('Build Check') {
+            agent any
             steps {
-                sh 'echo "Build successful!"'
+                echo 'Build successful!'
             }
         }
     }
-}
+}s
