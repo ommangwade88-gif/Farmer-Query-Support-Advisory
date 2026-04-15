@@ -5,10 +5,22 @@ pipeline {
 
         stage('Verify Tools') {
             steps {
-                bat 'node -v'
-                bat 'npm -v'
-                bat 'python --version || echo Python not installed'
-                bat 'pip --version || echo Pip not installed'
+                bat '''
+                node -v
+                npm -v
+
+                python --version
+                if %ERRORLEVEL% NEQ 0 (
+                  echo Python not installed
+                )
+
+                pip --version
+                if %ERRORLEVEL% NEQ 0 (
+                  echo Pip not installed
+                )
+
+                exit 0
+                '''
             }
         }
 
@@ -26,8 +38,13 @@ pipeline {
                 )
 
                 if exist requirements.txt (
-                  pip install -r requirements.txt || echo Skipping Python deps
+                  pip install -r requirements.txt
+                  if %ERRORLEVEL% NEQ 0 (
+                    echo Skipping Python dependencies
+                  )
                 )
+
+                exit 0
                 '''
             }
         }
