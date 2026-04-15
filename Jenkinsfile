@@ -13,12 +13,6 @@ pipeline {
             }
         }
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/ommangwade88-gif/Farmer-Query-Support-Advisory.git'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 bat '''
