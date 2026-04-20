@@ -11,28 +11,31 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Branch: ${env.GIT_BRANCH} | Build: ${env.BUILD_NUMBER}"
+                echo "Build #${env.BUILD_NUMBER} started"
             }
         }
 
         stage('Install Node Dependencies') {
             steps {
                 sh '''
-                    node -v && npm -v
-                    npm install
-                    echo "Node install OK"
+                    docker run --rm \
+                      -v "$WORKSPACE":/app \
+                      -w /app \
+                      node:18-alpine \
+                      sh -c "npm install && echo Node install OK"
                 '''
             }
         }
 
         stage('Install Python Dependencies') {
             steps {
-                dir('python-service') {
-                    sh '''
-                        pip3 install --no-cache-dir flask flask-cors pillow httpx gunicorn
-                        python3 -c "import flask, PIL, httpx; print('Python deps OK')"
-                    '''
-                }
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE/python-service":/app \
+                      -w /app \
+                      python:3.10-slim \
+                      sh -c "pip install --no-cache-dir flask flask-cors pillow httpx gunicorn && python -c 'import flask, PIL, httpx; print(\"Python deps OK\")'"
+                '''
             }
         }
 
@@ -41,7 +44,7 @@ pipeline {
                 sh '''
                     docker build -t ${IMAGE_NODE}:${BUILD_NUMBER}   -f Dockerfile .
                     docker build -t ${IMAGE_PYTHON}:${BUILD_NUMBER} -f python-service/Dockerfile ./python-service
-                    echo "Docker images built successfully"
+                    echo "Images built: ${IMAGE_NODE}:${BUILD_NUMBER} and ${IMAGE_PYTHON}:${BUILD_NUMBER}"
                 '''
             }
         }
@@ -67,6 +70,7 @@ pipeline {
                         docker push $DOCKER_USER/${IMAGE_PYTHON}:latest
 
                         docker logout
+                        echo "Images pushed to Docker Hub"
                     '''
                 }
             }
@@ -77,9 +81,9 @@ pipeline {
                 sh '''
                     docker compose down --remove-orphans || true
                     docker compose up -d --build
-                    echo "Waiting for services to start..."
                     sleep 10
                     docker compose ps
+                    echo "App running at http://localhost:3000"
                 '''
             }
         }
@@ -87,10 +91,10 @@ pipeline {
 
     post {
         success {
-            echo "Build #${env.BUILD_NUMBER} SUCCESS — App running at http://localhost:3000"
+            echo "Build #${env.BUILD_NUMBER} SUCCESS — http://localhost:3000"
         }
         failure {
-            echo "Build #${env.BUILD_NUMBER} FAILED — Check Console Output above"
+            echo "Build #${env.BUILD_NUMBER} FAILED — check Console Output"
         }
         always {
             sh 'docker logout || true'
