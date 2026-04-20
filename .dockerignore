@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+jenkins-data
+.git
+.gitignore
+*.md
+.vscode

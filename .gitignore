@@ -19,3 +19,13 @@ env/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local Jenkins (do not commit WAR or home)
+jenkins.war
+jenkins-data/
+
+# Nested clone — not part of this repo
+public/Farmer-Query-Support-Advisory/
+
+# VS Code
+.vscode/
