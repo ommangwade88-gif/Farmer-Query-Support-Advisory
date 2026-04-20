@@ -19,30 +19,26 @@ pipeline {
         stage('Install Node Dependencies') {
             steps {
                 sh '''
-                    echo "=== Node Install ==="
-                    ls package.json
-                    docker run --rm \
-                      -v ${WORKSPACE}:/app \
-                      -w /app \
-                      node:18-alpine \
-                      npm install --prefer-offline
-                    echo "Node install OK"
+                    echo "=== Node Version ==="
+                    node --version
+                    npm --version
+                    npm install
+                    echo "=== Node install OK ==="
                 '''
             }
         }
 
         stage('Install Python Dependencies') {
             steps {
-                sh '''
-                    echo "=== Python Install ==="
-                    ls python-service/requirements.txt
-                    docker run --rm \
-                      -v ${WORKSPACE}/python-service:/app \
-                      -w /app \
-                      python:3.10-slim \
-                      pip install --no-cache-dir -r requirements.txt
-                    echo "Python install OK"
-                '''
+                dir('python-service') {
+                    sh '''
+                        echo "=== Python Version ==="
+                        python3 --version
+                        pip3 install --no-cache-dir -r requirements.txt --break-system-packages
+                        python3 -c "import flask, PIL, httpx; print('Python deps OK')"
+                        echo "=== Python install OK ==="
+                    '''
+                }
             }
         }
 
@@ -51,13 +47,13 @@ pipeline {
                 sh '''
                     echo "=== Docker Build ==="
                     docker build -t ${IMAGE_NODE}:${BUILD_NUMBER} -t ${IMAGE_NODE}:latest \
-                      -f Dockerfile .
+                        -f Dockerfile .
 
                     docker build -t ${IMAGE_PYTHON}:${BUILD_NUMBER} -t ${IMAGE_PYTHON}:latest \
-                      -f python-service/Dockerfile ./python-service
+                        -f python-service/Dockerfile ./python-service
 
-                    echo "Built images:"
-                    docker images | grep -E "farmer-node|farmer-python"
+                    echo "=== Built Images ==="
+                    docker images | grep farmer
                 '''
             }
         }
@@ -83,7 +79,7 @@ pipeline {
                         docker push $DOCKER_USER/${IMAGE_PYTHON}:${BUILD_NUMBER}
                         docker push $DOCKER_USER/${IMAGE_PYTHON}:latest
 
-                        echo "Push complete"
+                        echo "=== Push complete ==="
                     '''
                 }
             }
@@ -93,11 +89,11 @@ pipeline {
             steps {
                 sh '''
                     echo "=== Deploy ==="
-                    docker compose -f ${WORKSPACE}/docker-compose.yml down --remove-orphans || true
-                    docker compose -f ${WORKSPACE}/docker-compose.yml up -d --build
+                    docker compose down --remove-orphans || true
+                    docker compose up -d --build
                     sleep 8
-                    docker compose -f ${WORKSPACE}/docker-compose.yml ps
-                    echo "App live at http://localhost:3000"
+                    docker compose ps
+                    echo "=== App live at http://localhost:3000 ==="
                 '''
             }
         }
