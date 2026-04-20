@@ -12,16 +12,13 @@ pipeline {
             steps {
                 checkout scm
                 echo "Build #${env.BUILD_NUMBER} — workspace: ${env.WORKSPACE}"
-                sh 'ls -la'
             }
         }
 
         stage('Install Node Dependencies') {
             steps {
                 sh '''
-                    echo "=== Node Version ==="
-                    node --version
-                    npm --version
+                    node --version && npm --version
                     npm install
                     echo "=== Node install OK ==="
                 '''
@@ -32,7 +29,6 @@ pipeline {
             steps {
                 dir('python-service') {
                     sh '''
-                        echo "=== Python Version ==="
                         python3 --version
                         pip3 install --no-cache-dir -r requirements.txt --break-system-packages
                         python3 -c "import flask, PIL, httpx; print('Python deps OK')"
@@ -45,7 +41,6 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    echo "=== Docker Build ==="
                     docker build -t ${IMAGE_NODE}:${BUILD_NUMBER} -t ${IMAGE_NODE}:latest \
                         -f Dockerfile .
 
@@ -58,41 +53,37 @@ pipeline {
             }
         }
 
-        stage('Docker Push') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                        echo "=== Docker Push ==="
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
-                        docker tag ${IMAGE_NODE}:${BUILD_NUMBER}   $DOCKER_USER/${IMAGE_NODE}:${BUILD_NUMBER}
-                        docker tag ${IMAGE_NODE}:latest            $DOCKER_USER/${IMAGE_NODE}:latest
-                        docker tag ${IMAGE_PYTHON}:${BUILD_NUMBER} $DOCKER_USER/${IMAGE_PYTHON}:${BUILD_NUMBER}
-                        docker tag ${IMAGE_PYTHON}:latest          $DOCKER_USER/${IMAGE_PYTHON}:latest
-
-                        docker push $DOCKER_USER/${IMAGE_NODE}:${BUILD_NUMBER}
-                        docker push $DOCKER_USER/${IMAGE_NODE}:latest
-                        docker push $DOCKER_USER/${IMAGE_PYTHON}:${BUILD_NUMBER}
-                        docker push $DOCKER_USER/${IMAGE_PYTHON}:latest
-
-                        echo "=== Push complete ==="
-                    '''
-                }
-            }
-        }
-
         stage('Deploy') {
             steps {
                 sh '''
-                    echo "=== Deploy ==="
-                    docker compose down --remove-orphans || true
-                    docker compose up -d --build
+                    echo "=== Stopping old containers ==="
+                    docker stop farmer-node farmer-python 2>/dev/null || true
+                    docker rm   farmer-node farmer-python 2>/dev/null || true
+
+                    echo "=== Starting Python service ==="
+                    docker run -d \
+                        --name farmer-python \
+                        --restart unless-stopped \
+                        -p 8000:8000 \
+                        -e PORT=8000 \
+                        ${IMAGE_PYTHON}:latest
+
+                    echo "=== Waiting for Python to be ready ==="
                     sleep 8
-                    docker compose ps
+
+                    echo "=== Starting Node service ==="
+                    docker run -d \
+                        --name farmer-node \
+                        --restart unless-stopped \
+                        -p 3000:3000 \
+                        -e PORT=3000 \
+                        -e PYTHON_SERVICE_URL=http://farmer-python:8000 \
+                        --link farmer-python \
+                        ${IMAGE_NODE}:latest
+
+                    echo "=== Running Containers ==="
+                    docker ps | grep farmer
+
                     echo "=== App live at http://localhost:3000 ==="
                 '''
             }
@@ -101,13 +92,10 @@ pipeline {
 
     post {
         success {
-            echo "BUILD #${env.BUILD_NUMBER} SUCCESS — http://localhost:3000"
+            echo "BUILD #${env.BUILD_NUMBER} SUCCESS — open http://localhost:3000"
         }
         failure {
             echo "BUILD #${env.BUILD_NUMBER} FAILED — check Console Output above"
-        }
-        always {
-            sh 'docker logout || true'
         }
     }
 }
