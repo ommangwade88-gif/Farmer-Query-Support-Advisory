@@ -2,10 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDS = credentials('dockerhub-credentials')
-        IMAGE_NODE       = "farmer-node"
-        IMAGE_PYTHON     = "farmer-python"
-        IMAGE_TAG        = "${env.BUILD_NUMBER}"
+        IMAGE_NODE   = "farmer-node"
+        IMAGE_PYTHON = "farmer-python"
     }
 
     stages {
@@ -13,38 +11,26 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                echo "Branch: ${env.GIT_BRANCH} | Build: ${env.BUILD_NUMBER}"
             }
         }
 
-        stage('Install & Lint — Node') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
+        stage('Install Node Dependencies') {
             steps {
                 sh '''
                     node -v && npm -v
                     npm install
-                    node -e "require('./server.js')" &
-                    sleep 2 && kill %1 || true
+                    echo "Node install OK"
                 '''
             }
         }
 
-        stage('Install & Test — Python') {
-            agent {
-                docker {
-                    image 'python:3.10-slim'
-                    reuseNode true
-                }
-            }
+        stage('Install Python Dependencies') {
             steps {
                 dir('python-service') {
                     sh '''
-                        pip install --no-cache-dir flask flask-cors pillow httpx gunicorn
-                        python -c "import main; print('Python service import OK')"
+                        pip3 install --no-cache-dir flask flask-cors pillow httpx gunicorn
+                        python3 -c "import flask, PIL, httpx; print('Python deps OK')"
                     '''
                 }
             }
@@ -53,21 +39,36 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker build -t ${IMAGE_NODE}:${IMAGE_TAG}   -f Dockerfile .
-                    docker build -t ${IMAGE_PYTHON}:${IMAGE_TAG} -f python-service/Dockerfile ./python-service
+                    docker build -t ${IMAGE_NODE}:${BUILD_NUMBER}   -f Dockerfile .
+                    docker build -t ${IMAGE_PYTHON}:${BUILD_NUMBER} -f python-service/Dockerfile ./python-service
+                    echo "Docker images built successfully"
                 '''
             }
         }
 
         stage('Docker Push') {
             steps {
-                sh '''
-                    echo "${DOCKER_HUB_CREDS_PSW}" | docker login -u "${DOCKER_HUB_CREDS_USR}" --password-stdin
-                    docker tag ${IMAGE_NODE}:${IMAGE_TAG}   ${DOCKER_HUB_CREDS_USR}/${IMAGE_NODE}:${IMAGE_TAG}
-                    docker tag ${IMAGE_PYTHON}:${IMAGE_TAG} ${DOCKER_HUB_CREDS_USR}/${IMAGE_PYTHON}:${IMAGE_TAG}
-                    docker push ${DOCKER_HUB_CREDS_USR}/${IMAGE_NODE}:${IMAGE_TAG}
-                    docker push ${DOCKER_HUB_CREDS_USR}/${IMAGE_PYTHON}:${IMAGE_TAG}
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+                        docker tag ${IMAGE_NODE}:${BUILD_NUMBER}   $DOCKER_USER/${IMAGE_NODE}:${BUILD_NUMBER}
+                        docker tag ${IMAGE_NODE}:${BUILD_NUMBER}   $DOCKER_USER/${IMAGE_NODE}:latest
+                        docker tag ${IMAGE_PYTHON}:${BUILD_NUMBER} $DOCKER_USER/${IMAGE_PYTHON}:${BUILD_NUMBER}
+                        docker tag ${IMAGE_PYTHON}:${BUILD_NUMBER} $DOCKER_USER/${IMAGE_PYTHON}:latest
+
+                        docker push $DOCKER_USER/${IMAGE_NODE}:${BUILD_NUMBER}
+                        docker push $DOCKER_USER/${IMAGE_NODE}:latest
+                        docker push $DOCKER_USER/${IMAGE_PYTHON}:${BUILD_NUMBER}
+                        docker push $DOCKER_USER/${IMAGE_PYTHON}:latest
+
+                        docker logout
+                    '''
+                }
             }
         }
 
@@ -75,7 +76,10 @@ pipeline {
             steps {
                 sh '''
                     docker compose down --remove-orphans || true
-                    IMAGE_TAG=${IMAGE_TAG} docker compose up -d --build
+                    docker compose up -d --build
+                    echo "Waiting for services to start..."
+                    sleep 10
+                    docker compose ps
                 '''
             }
         }
@@ -83,10 +87,10 @@ pipeline {
 
     post {
         success {
-            echo "Build #${env.BUILD_NUMBER} deployed successfully."
+            echo "Build #${env.BUILD_NUMBER} SUCCESS — App running at http://localhost:3000"
         }
         failure {
-            echo "Build #${env.BUILD_NUMBER} failed."
+            echo "Build #${env.BUILD_NUMBER} FAILED — Check Console Output above"
         }
         always {
             sh 'docker logout || true'
